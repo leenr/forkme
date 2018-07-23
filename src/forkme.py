@@ -23,10 +23,15 @@ default_signals = frozenset({
     signal.SIGUSR1,
     signal.SIGUSR2,
 })
+interrupt_signals = frozenset({
+    signal.SIGTERM,
+    signal.SIGINT,
+    signal.SIGQUIT
+})
 
 
 def fork(num_processes, max_restarts=100, pass_signals=default_signals,
-         callback=None):
+         callback=None, shutdown_callback=None):
 
     global _TASK_ID
     assert _TASK_ID is None, "Process already forked"
@@ -42,7 +47,9 @@ def fork(num_processes, max_restarts=100, pass_signals=default_signals,
     def signal_to_children(sig, frame):
         nonlocal children, interrupt
 
-        if sig in {signal.SIGTERM, signal.SIGINT, signal.SIGQUIT}:
+        if sig in interrupt_signals:
+            if callable(shutdown_callback):
+                shutdown_callback(sig)
             interrupt = True
 
         for pid in children:
